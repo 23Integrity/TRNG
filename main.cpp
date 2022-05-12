@@ -1,9 +1,11 @@
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <array>
+#include <unistd.h>
 #include "src/MurmurHash1.h"
 
 std::string exec(const char* cmd) {
@@ -20,12 +22,14 @@ std::string exec(const char* cmd) {
 }
 
 int getFreq() {
-    std::string result = (exec("sudo /usr/bin/powermetrics -s cpu_power -n 1 | grep \"CPU 1 frequency\"")).substr(17, 4);
-    return std::stoi(result) * 1000;
+    std::ifstream file {"/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"};
+    std::string freq;
+    std::getline(file, freq);
+    return std::stoi(freq);
 }
 
 std::string Rando(int amountOfBits) {
-    int i = 1;
+    int i = 0;
     unsigned int bits[8];
     std::string word = "";
 
@@ -36,6 +40,7 @@ std::string Rando(int amountOfBits) {
         uint32_t d = MurmurHash1(&k, l, b);
         bits[i] = (d & 1);
         i++;
+        usleep(10 * 1000);
     }
     for (int j = 0; j < amountOfBits; j++) {
         word += std::to_string(bits[j]);
@@ -44,6 +49,13 @@ std::string Rando(int amountOfBits) {
 }
 
 int main() {
-    std::cout << Rando(8) << std::endl;
+    std::ofstream file { "results.txt" };
+    if (file.is_open()) { 
+        for (int i = 0; i < 250000; i++) {
+            file << Rando(8) << std::endl;
+        }
+    }
+    else { std::cout << "Unable to open the file\n";}
+    file.close();
     return 0;
 }
